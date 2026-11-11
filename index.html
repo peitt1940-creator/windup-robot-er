@@ -1,0 +1,503 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>發條機器人急診室</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Space+Mono:wght@400;700&display=swap">
+<style>
+/* Layout: 修理員＝洞洞板工作牆上的四塊維修面板；手冊組＝藍圖紙。單一視覺世界，不切深淺色。 */
+:root{
+  color-scheme: light;
+  --wall:#1c3644; --wall2:#244656; --paper:#eef3f5; --paper2:#dde6ea;
+  --ink:#13232d; --muted:#4f6470; --metal:#9aaab3; --safety:#ffb000; --safety-ink:#3a2700;
+  --ok:#1f9d5c; --bad:#d6453d; --blue:#1f4e79; --grid:#c9d8e4;
+  --f-body:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  --f-mono:"Space Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;font-family:var(--f-body);font-size:16px;line-height:1.6;color:var(--ink);
+  background:var(--wall);
+  background-image:radial-gradient(circle,rgba(0,0,0,.28) 2.2px,transparent 2.6px);
+  background-size:22px 22px;}
+.wrap{max-width:1040px;margin:0 auto;padding-block:20px 40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));}
+h1,h2,h3{text-wrap:balance;line-height:1.25;margin:0}
+button{font:inherit;cursor:pointer;border:0;border-radius:10px}
+button:focus-visible,input:focus-visible{outline:3px solid var(--safety);outline-offset:2px}
+.btn{background:var(--safety);color:var(--safety-ink);font-weight:700;padding:12px 20px;font-size:17px;box-shadow:0 3px 0 #a87400}
+.btn:active{transform:translateY(2px);box-shadow:0 1px 0 #a87400}
+.btn.ghost{background:var(--paper2);color:var(--ink);box-shadow:0 3px 0 var(--metal)}
+.btn.small{padding:8px 14px;font-size:15px}
+.panel{background:var(--paper);border-radius:6px;padding:22px;position:relative;box-shadow:0 6px 0 rgba(0,0,0,.25)}
+.panel::before,.panel::after{content:"";position:absolute;top:9px;width:9px;height:9px;border-radius:50%;
+  background:radial-gradient(circle at 35% 35%,#fff,var(--metal) 60%);box-shadow:inset 0 0 0 1px rgba(0,0,0,.25)}
+.panel::before{left:9px}.panel::after{right:9px}
+.muted{color:var(--muted)}
+.mono{font-family:var(--f-mono)}
+
+/* 開始畫面 */
+.hero{color:var(--paper);display:grid;gap:18px;padding-block:20px 8px}
+.tag{display:inline-block;font-family:var(--f-mono);font-size:13px;letter-spacing:.12em;color:var(--safety);border:1.5px solid var(--safety);padding:2px 10px;border-radius:4px}
+.hero h1{font-size:clamp(34px,7vw,60px);font-weight:900;letter-spacing:.02em}
+.hero p{max-width:40em;margin:0;color:#cfdde3}
+.sig{font-size:13px;color:#9fb6c0}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:16px;margin-top:14px}
+.role{display:grid;gap:10px;align-content:start}
+.role h2{font-size:22px}
+.role .btn{justify-self:start}
+.teams{margin:0;padding-left:1.2em}
+.teams li{margin:2px 0}
+
+/* 修理員 */
+.hud{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;color:var(--paper);margin-bottom:14px}
+.hud .timer{font-family:var(--f-mono);font-size:30px;font-weight:700;background:#0d1d26;color:var(--safety);padding:2px 14px;border-radius:6px;font-variant-numeric:tabular-nums}
+.hud .timer.low{color:#ff6b5e}
+.strikes{font-size:22px;letter-spacing:4px}
+.serial{background:#f6f1d8;color:#3b3200;font-family:var(--f-mono);font-weight:700;padding:3px 10px;border-radius:3px;transform:rotate(-2deg);box-shadow:0 2px 0 rgba(0,0,0,.3)}
+.mods{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr));gap:16px}
+.mod{display:grid;gap:12px;align-content:start}
+.mod header{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.mod h3{font-size:19px}
+.pill{font-size:13px;font-weight:700;padding:2px 10px;border-radius:99px;background:var(--paper2);color:var(--muted)}
+.mod.done .pill{background:var(--ok);color:#fff}
+.mod.done .stage{opacity:.55;pointer-events:none}
+.stage{background:#fff;border:2px solid var(--paper2);border-radius:6px;padding:10px;overflow-x:auto}
+.stage svg{display:block;margin:0 auto;max-width:100%;height:auto}
+.ctrls{display:flex;flex-wrap:wrap;gap:8px}
+.ctrls button{background:var(--wall2);color:#fff;padding:10px 14px;font-weight:700;box-shadow:0 3px 0 #0d1d26}
+.ctrls button:active{transform:translateY(2px);box-shadow:0 1px 0 #0d1d26}
+.turns{font-family:var(--f-mono);font-size:18px;align-self:center}
+.wire{cursor:pointer}
+.wire:hover .hit{stroke:rgba(255,176,0,.35)}
+.symbols{display:flex;justify-content:center;gap:18px;font-size:46px;background:#0d1d26;border-radius:6px;padding:10px}
+.codebox{font-family:var(--f-mono);font-size:28px;letter-spacing:10px;text-align:center;background:#0d1d26;color:#6dfc9c;border-radius:6px;padding:4px;min-height:52px}
+.keypad{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.keypad button{background:var(--paper2);color:var(--ink);font-family:var(--f-mono);font-size:20px;font-weight:700;padding:8px 0;box-shadow:0 3px 0 var(--metal)}
+.keypad .wide{grid-column:span 2;font-family:var(--f-body);font-size:15px;background:var(--wall2);color:#fff;box-shadow:0 3px 0 #0d1d26}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:#fff;padding:12px 20px;border-radius:10px;font-weight:700;max-width:calc(100% - 32px);z-index:20;box-shadow:0 6px 20px rgba(0,0,0,.4)}
+.toast.bad{background:var(--bad)}.toast.ok{background:var(--ok)}
+.shake{animation:shake .35s}
+@keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+@media (prefers-reduced-motion:reduce){.shake{animation:none}}
+
+/* 手冊（藍圖紙） */
+.manual{background-color:#f4f8fb;background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:24px 24px;color:var(--blue)}
+.manual h2{font-size:24px;color:var(--blue)}
+.manual h3{font-size:18px;margin-top:10px;color:var(--blue)}
+.book{display:grid;gap:8px;max-width:44em}
+.book + .book{margin-top:26px;padding-top:20px;border-top:2px dashed var(--blue)}
+.book ol,.book ul{margin:0;padding-left:1.4em}
+.book li{margin:4px 0}
+.note{background:#fff;border:1.5px solid var(--blue);border-radius:4px;padding:8px 12px;color:var(--ink)}
+table{border-collapse:collapse;background:#fff;color:var(--ink)}
+th,td{border:1.5px solid var(--blue);padding:6px 12px;text-align:center}
+th{background:#e3edf5}
+.tablewrap{overflow-x:auto}
+.picker{display:flex;flex-wrap:wrap;gap:8px}
+.picker label{display:flex;align-items:center;gap:6px;background:#fff;border:2px solid var(--blue);border-radius:8px;padding:6px 12px;font-weight:700;color:var(--blue);cursor:pointer}
+.symtab td:first-child{font-size:28px}
+
+/* 結局 */
+.end{display:grid;gap:14px;max-width:46em;margin:0 auto}
+.end h2{font-size:30px}
+.stats{display:flex;flex-wrap:wrap;gap:10px}
+.stat{background:var(--paper2);border-radius:6px;padding:8px 14px}
+.stat b{font-family:var(--f-mono);font-size:22px;display:block}
+.qs{margin:0;padding-left:1.3em}
+.qs li{margin:6px 0}
+</style>
+</head>
+<body>
+
+
+<div class="wrap" id="app">
+
+<!-- 開始畫面 -->
+<section id="scr-start">
+  <div class="hero">
+    <span class="tag">工單 #<span id="ticket">0000</span> · 玩具博覽會前一天</span>
+    <h1>發條機器人急診室</h1>
+    <p>明天早上九點，玩具博覽會要開幕。展示台上的發條機器人「阿轉」今天突然不動了：齒輪卡住、發條沒力、電線亂接、胸口的密碼鎖也鎖死。修理員坐在工作台前，看得到阿轉，卻沒有修理手冊；工程師們拿著手冊在隔壁房間，看不到阿轉。你們只能用說的。</p>
+    <p class="sig">本遊戲由Peiching開發，角色與情境均為虛構</p>
+  </div>
+  <div class="grid2">
+    <div class="panel role">
+      <h2>🔧 我是修理員</h2>
+      <p class="muted" style="margin:0">只有你看得到阿轉。把你看到的東西說清楚，照工程師說的動手修。不要讓工程師看你的螢幕。</p>
+      <button class="btn" id="go-op">打開工作台</button>
+    </div>
+    <div class="panel role">
+      <h2>📘 我拿手冊</h2>
+      <p class="muted" style="margin:0">你看不到阿轉，手上只有修理規則。問修理員問題，找出正確的修法告訴他。不要讓修理員看你的手冊。</p>
+      <button class="btn" id="go-man">打開手冊</button>
+    </div>
+  </div>
+  <div class="panel" style="margin-top:16px">
+    <h3 style="font-size:18px;margin-bottom:6px">怎麼分組（2–4 人，一輪約 12 分鐘）</h3>
+    <ul class="teams">
+      <li><b>2 人</b>：1 位修理員＋1 位工程師（三本手冊都拿）</li>
+      <li><b>3 人</b>：1 位修理員＋2 位工程師（一人拿齒輪本，一人拿發條本和電路本）</li>
+      <li><b>4 人</b>：1 位修理員＋3 位工程師（每人一本）</li>
+    </ul>
+    <p class="muted" style="margin:8px 0 0">修理員用一台平板或電腦；工程師用另一台裝置打開同一個網址，選「我拿手冊」。手冊可以投影在大螢幕給好幾組共用。限時 12 分鐘，零件彈出來 3 次就要重修。</p>
+  </div>
+</section>
+
+<!-- 修理員準備 -->
+<section id="scr-ready" hidden>
+  <div class="panel" style="max-width:640px;margin:20px auto;display:grid;gap:12px">
+    <h2>開工前確認</h2>
+    <ul class="teams">
+      <li>工程師們都打開手冊、選好自己負責哪一本了嗎？</li>
+      <li>工程師坐的位置看不到這個螢幕嗎？</li>
+      <li>四個地方可以照任何順序修。修錯一次，零件會彈出來（🔩），彈出 3 次阿轉就散了。</li>
+    </ul>
+    <button class="btn" id="go-start" style="justify-self:start">開始計時</button>
+  </div>
+</section>
+
+<!-- 修理員工作台 -->
+<section id="scr-op" hidden>
+  <div class="hud">
+    <span class="timer" id="timer">12:00</span>
+    <span>彈出的零件 <span class="strikes" id="strikes">⚪⚪⚪</span></span>
+    <span>阿轉背面的貼紙 <span class="serial" id="serial">W-07-?</span></span>
+    <span id="progress">已修好 0 / 4</span>
+  </div>
+  <div class="mods">
+    <article class="panel mod" id="m-gear">
+      <header><h3>① 齒輪組</h3><span class="pill">待修</span></header>
+      <div class="stage" id="gear-stage"></div>
+      <p class="muted" style="margin:0">搖桿裝在最左邊的齒輪上。最右邊的齒輪要怎麼轉？</p>
+      <div class="ctrls">
+        <button data-g="cw-fast">↻ 順時針・快</button><button data-g="cw-slow">↻ 順時針・慢</button>
+        <button data-g="ccw-fast">↺ 逆時針・快</button><button data-g="ccw-slow">↺ 逆時針・慢</button>
+      </div>
+    </article>
+    <article class="panel mod" id="m-spring">
+      <header><h3>② 發條盒</h3><span class="pill">待修</span></header>
+      <div class="stage" id="spring-stage"></div>
+      <div class="ctrls">
+        <button id="sp-turn">轉一圈</button><button id="sp-reset">歸零</button><button id="sp-lock">🔒 鎖上發條</button>
+        <span class="turns">已轉 <b id="sp-n">0</b> 圈</span>
+      </div>
+    </article>
+    <article class="panel mod" id="m-wire">
+      <header><h3>③ 電線盒</h3><span class="pill">待修</span></header>
+      <div class="stage" id="wire-stage"></div>
+      <p class="muted" style="margin:0">只能剪一條。點電線就會剪下去。</p>
+    </article>
+    <article class="panel mod" id="m-code">
+      <header><h3>④ 胸口密碼鎖</h3><span class="pill">待修</span></header>
+      <div class="symbols" id="code-sym"></div>
+      <div class="codebox" id="code-box"></div>
+      <div class="keypad" id="keypad"></div>
+    </article>
+  </div>
+</section>
+
+<!-- 手冊 -->
+<section id="scr-man" hidden>
+  <div class="panel manual">
+    <div class="book">
+      <h2>修理手冊</h2>
+      <p style="margin:0;color:var(--ink)">你們看不到阿轉。先問修理員看到什麼，再翻規則。你負責哪幾本？</p>
+      <div class="picker">
+        <label><input type="checkbox" id="bk-A" value="A"> 📘 齒輪本</label>
+        <label><input type="checkbox" id="bk-B" value="B"> 📗 發條本</label>
+        <label><input type="checkbox" id="bk-C" value="C"> 📙 電路本</label>
+      </div>
+      <div class="note"><b>好用的問法</b>：先問「有幾個？」再問「從左邊（上面）開始，第一個是什麼顏色？」。聽完後用自己的話說一次給修理員確認：「所以是紅、藍、藍，對嗎？」</div>
+    </div>
+    <div id="books"></div>
+  </div>
+</section>
+
+<!-- 結局 -->
+<section id="scr-end" hidden>
+  <div class="panel end" id="end-box"></div>
+</section>
+</div>
+
+<template id="tpl-A">
+<div class="book">
+  <h2>📘 齒輪本</h2>
+  <h3>① 齒輪組</h3>
+  <p style="margin:0;color:var(--ink)">修理員會看到一排齒輪，從左到右排。搖桿裝在最左邊那個。</p>
+  <ol style="color:var(--ink)">
+    <li>先問搖桿上的箭頭：最左邊的齒輪是順時針（↻）還是逆時針（↺）。</li>
+    <li>兩個齒輪咬在一起，轉的方向會<b>相反</b>。</li>
+    <li>例外：如果相鄰的兩個齒輪<b>顏色一樣</b>，它們是疊在同一根軸上的雙層齒輪，轉的方向<b>一樣</b>。</li>
+    <li>從左往右一個一個推，找出最右邊齒輪的方向。</li>
+    <li>速度：最右邊的齒輪如果比最左邊的<b>大</b>，選「慢」；一樣大或比較小，選「快」。</li>
+  </ol>
+  <h3>④ 密碼表（上半）</h3>
+  <p style="margin:0;color:var(--ink)">密碼鎖的螢幕會出現 3 個圖案。這本只有 4 個圖案的數字，另外 4 個在電路本。輸入順序要問發條本。</p>
+  <div class="tablewrap"><table class="symtab"><tr><th>圖案</th><th>數字</th></tr>
+    <tr><td>☀️</td><td>7</td></tr><tr><td>🌙</td><td>2</td></tr><tr><td>⭐</td><td>5</td></tr><tr><td>☁️</td><td>9</td></tr></table></div>
+</div>
+</template>
+<template id="tpl-B">
+<div class="book">
+  <h2>📗 發條本</h2>
+  <h3>② 發條盒</h3>
+  <p style="margin:0;color:var(--ink)">修理員會看到一個彈簧和一個儀表。問他：彈簧是什麼顏色？儀表指針停在哪個顏色的區域？</p>
+  <div class="tablewrap"><table><tr><th>彈簧＼指針</th><th>綠區</th><th>黃區</th><th>紅區</th></tr>
+    <tr><th>銀色</th><td>3</td><td>2</td><td>1</td></tr>
+    <tr><th>銅色（橘棕色）</th><td>4</td><td>3</td><td>2</td></tr>
+    <tr><th>黑色</th><td>2</td><td>1</td><td>0</td></tr></table></div>
+  <ul style="color:var(--ink)">
+    <li>表格的數字是「要轉幾圈」，轉好再按「鎖上發條」。</li>
+    <li>如果發條盒上貼著 ⚠️ 貼紙，要多轉 1 圈。</li>
+    <li>0 圈＝不用轉，直接鎖上。</li>
+  </ul>
+  <h3>④ 密碼的輸入順序</h3>
+  <p style="margin:0;color:var(--ink)">數字要問齒輪本和電路本。順序看阿轉背面貼紙（像 W-07-K）的<b>最後一個字</b>：</p>
+  <ul style="color:var(--ink)">
+    <li>是<b>奇數</b>（1、3、5、7、9）→ 數字從<b>小到大</b>輸入</li>
+    <li>是<b>偶數</b>（0、2、4、6、8）→ 數字從<b>大到小</b>輸入</li>
+    <li>是<b>英文字母</b> → 照螢幕上圖案的順序，從左到右輸入</li>
+  </ul>
+</div>
+</template>
+<template id="tpl-C">
+<div class="book">
+  <h2>📙 電路本</h2>
+  <h3>③ 電線盒</h3>
+  <p style="margin:0;color:var(--ink)">修理員會看到 4 或 5 條電線，從上面往下數。先問清楚每一條的顏色，再從第 1 條規則開始看，<b>符合哪一條就照做，後面不用看</b>。</p>
+  <ol style="color:var(--ink)">
+    <li>沒有紅線 → 剪第 2 條。</li>
+    <li>最後一條是白線 → 剪最後一條。</li>
+    <li>藍線有 2 條或更多 → 剪最後一條藍線。</li>
+    <li>有黑線 → 剪第 1 條。</li>
+    <li>上面都不符合 → 剪最後一條紅線。</li>
+  </ol>
+  <h3>④ 密碼表（下半）</h3>
+  <p style="margin:0;color:var(--ink)">另外 4 個圖案在齒輪本。輸入順序要問發條本。</p>
+  <div class="tablewrap"><table class="symtab"><tr><th>圖案</th><th>數字</th></tr>
+    <tr><td>🍀</td><td>4</td></tr><tr><td>🔥</td><td>8</td></tr><tr><td>💧</td><td>1</td></tr><tr><td>🍄</td><td>6</td></tr></table></div>
+</div>
+</template>
+
+<script>
+(function(){
+const $=s=>document.querySelector(s);
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const rint=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+const TIME=12*60, MAXS=3;
+const GCOL={紅:'#e5484d',藍:'#2f6fe0',黃:'#f2c230',綠:'#1f9d5c',紫:'#8b5cf6'};
+const WCOL={紅:'#e5484d',藍:'#2f6fe0',黃:'#f2c230',白:'#ffffff',黑:'#222222'};
+const SCOL={銀色:'#c3ccd2',銅色:'#c46f3b',黑色:'#2a2a2a'};
+const SYM={'☀️':7,'🌙':2,'⭐':5,'☁️':9,'🍀':4,'🔥':8,'💧':1,'🍄':6};
+const SPRING={銀色:{綠:3,黃:2,紅:1},銅色:{綠:4,黃:3,紅:2},黑色:{綠:2,黃:1,紅:0}};
+let S=null, tick=null;
+
+function genGear(){
+  const n=rint(3,5), names=Object.keys(GCOL), c=[];
+  for(let i=0;i<n;i++){let x;do{x=pick(names)}while(i>0&&x===c[i-1]);c.push(x);}
+  if(Math.random()<0.55){const i=rint(1,n-1);c[i]=c[i-1];
+    if(i+1<n&&c[i+1]===c[i]){let x;do{x=pick(names)}while(x===c[i]);c[i+1]=x;}}
+  const size=c.map(()=>rint(1,3));
+  if(size[n-1]===size[0]&&Math.random()<0.6) size[n-1]=size[0]===3?1:size[0]+1;
+  return {colors:c,size,crank:pick(['cw','ccw'])};
+}
+function ansGear(g){
+  let d=g.crank;
+  for(let i=1;i<g.colors.length;i++){ if(g.colors[i]!==g.colors[i-1]) d=d==='cw'?'ccw':'cw'; }
+  const sp=g.size[g.size.length-1]>g.size[0]?'slow':'fast';
+  return d+'-'+sp;
+}
+function genSpring(){return {color:pick(Object.keys(SCOL)),zone:pick(['綠','黃','紅']),sticker:Math.random()<0.35};}
+function ansSpring(s){return SPRING[s.color][s.zone]+(s.sticker?1:0);}
+function genWire(){const n=rint(4,5),w=[];for(let i=0;i<n;i++)w.push(pick(Object.keys(WCOL)));return w;}
+function ansWire(w){ // 回傳要剪的索引（0 起算）
+  const n=w.length;
+  if(!w.includes('紅')) return 1;
+  if(w[n-1]==='白') return n-1;
+  if(w.filter(x=>x==='藍').length>=2) return w.lastIndexOf('藍');
+  if(w.includes('黑')) return 0;
+  return w.lastIndexOf('紅');
+}
+function genCode(){
+  const k=Object.keys(SYM).sort(()=>Math.random()-.5).slice(0,3);
+  if(!k.some(x=>['☀️','🌙','⭐','☁️'].includes(x))) k[0]=pick(['☀️','🌙','⭐','☁️']);
+  if(!k.some(x=>['🍀','🔥','💧','🍄'].includes(x))) k[2]=pick(['🍀','🔥','💧','🍄']);
+  const last=pick('0123456789KMPRT'.split(''));
+  return {sym:k,serial:'W-07-'+last};
+}
+function ansCode(c){
+  const nums=c.sym.map(s=>SYM[s]); const last=c.serial.slice(-1);
+  if(/[0-9]/.test(last)){ const odd=(+last)%2===1; nums.sort((a,b)=>odd?a-b:b-a); }
+  return nums.join('');
+}
+
+function newRun(){
+  S={gear:genGear(),spring:genSpring(),wire:genWire(),code:genCode(),
+     done:{gear:false,spring:false,wire:false,code:false},order:[],strikes:0,
+     turns:0,entry:'',cut:[],t0:0,left:TIME,over:false,log:[]};
+}
+
+/* ---------- 畫面 ---------- */
+function show(id){document.querySelectorAll('#app > section').forEach(s=>s.hidden=s.id!==id);window.scrollTo(0,0);}
+function toast(msg,kind){const t=document.createElement('div');t.className='toast '+(kind||'');t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2200);}
+
+function gearSVG(g){
+  const R={1:22,2:31,3:40}; let x=14, parts=[], H=120, cy=70;
+  g.colors.forEach((c,i)=>{
+    const r=R[g.size[i]]; x+=r; const col=GCOL[c];
+    const circ=2*Math.PI*(r+3), teeth=Math.round(r/3.2);
+    parts.push(`<circle cx="${x}" cy="${cy}" r="${r}" fill="${col}" stroke="${col}" stroke-width="9" stroke-dasharray="${(circ/teeth/2).toFixed(2)} ${(circ/teeth/2).toFixed(2)}"/>`);
+    parts.push(`<circle cx="${x}" cy="${cy}" r="${r-3}" fill="${col}" stroke="rgba(0,0,0,.25)" stroke-width="1.5"/>`);
+    parts.push(`<circle cx="${x}" cy="${cy}" r="5" fill="#fff" stroke="#333" stroke-width="1.5"/>`);
+    if(i===0){parts.push(`<line x1="${x}" y1="${cy}" x2="${x}" y2="${cy-r-14}" stroke="#555" stroke-width="5" stroke-linecap="round"/><circle cx="${x}" cy="${cy-r-16}" r="6" fill="#555"/>`);
+      parts.push(`<text x="${x+16}" y="${cy-r-8}" font-size="26" font-weight="700" fill="#13232d">${g.crank==='cw'?'↻':'↺'}</text>`);}
+    x+=r+6;
+  });
+  const W=x+14;
+  return `<svg viewBox="0 0 ${W} ${H+16}" width="${W}" role="img" aria-label="齒輪組">${parts.join('')}</svg>`;
+}
+function springSVG(s){
+  const ang={綠:[180,120],黃:[120,60],紅:[60,0]}[s.zone];
+  const a=(ang[0]-8-Math.random()*(ang[0]-ang[1]-16))*Math.PI/180;
+  const cx=230,cy=110,r=70;
+  const arc=(a0,a1,col)=>{const p=t=>[cx+r*Math.cos(t*Math.PI/180),cy-r*Math.sin(t*Math.PI/180)];const [x0,y0]=p(a0),[x1,y1]=p(a1);
+    return `<path d="M${x0.toFixed(1)} ${y0.toFixed(1)} A${r} ${r} 0 0 1 ${x1.toFixed(1)} ${y1.toFixed(1)}" stroke="${col}" stroke-width="18" fill="none"/>`;};
+  let coil='';const col=SCOL[s.color];
+  for(let i=0;i<7;i++) coil+=`<ellipse cx="${30+i*13}" cy="80" rx="9" ry="34" fill="none" stroke="${col}" stroke-width="6"/>`;
+  return `<svg viewBox="0 0 330 140" width="330" role="img" aria-label="發條盒">
+   <rect x="6" y="30" width="130" height="100" rx="8" fill="#eef1f3" stroke="#9aaab3" stroke-width="2"/>${coil}
+   ${s.sticker?'<text x="104" y="58" font-size="26">⚠️</text>':''}
+   ${arc(180,120,'#1f9d5c')}${arc(120,60,'#f2c230')}${arc(60,0,'#e5484d')}
+   <line x1="${cx}" y1="${cy}" x2="${(cx+(r-6)*Math.cos(a)).toFixed(1)}" y2="${(cy-(r-6)*Math.sin(a)).toFixed(1)}" stroke="#13232d" stroke-width="4" stroke-linecap="round"/>
+   <circle cx="${cx}" cy="${cy}" r="7" fill="#13232d"/></svg>`;
+}
+function wireSVG(w,cut){
+  const H=34*w.length+20; let p=`<rect x="8" y="6" width="22" height="${H-12}" rx="4" fill="#9aaab3"/><rect x="300" y="6" width="22" height="${H-12}" rx="4" fill="#9aaab3"/>`;
+  w.forEach((c,i)=>{const y=24+i*34, col=WCOL[c], isCut=cut.includes(i);
+    const line=isCut?`<path d="M30 ${y} H150 M180 ${y} H300" stroke="${col}" stroke-width="9" stroke-linecap="round"/>`:
+      `<path d="M30 ${y} C110 ${y-14},220 ${y+14},300 ${y}" stroke="${col}" stroke-width="9" fill="none"/>`;
+    const outline=(c==='白')?(isCut?`<path d="M30 ${y} H150 M180 ${y} H300" stroke="#8a969c" stroke-width="12" stroke-linecap="round"/>`:`<path d="M30 ${y} C110 ${y-14},220 ${y+14},300 ${y}" stroke="#8a969c" stroke-width="12" fill="none"/>`):'';
+    p+=`<g class="wire" data-w="${i}" tabindex="0" role="button" aria-label="電線"><path class="hit" d="M30 ${y} H300" stroke="transparent" stroke-width="30"/>${outline}${line}</g>`;});
+  return `<svg viewBox="0 0 330 ${H}" width="330" role="img" aria-label="電線盒">${p}</svg>`;
+}
+
+function renderOp(){
+  $('#gear-stage').innerHTML=gearSVG(S.gear);
+  $('#spring-stage').innerHTML=springSVG(S.spring);
+  $('#wire-stage').innerHTML=wireSVG(S.wire,S.cut);
+  $('#code-sym').textContent=S.code.sym.join(' ');
+  $('#serial').textContent=S.code.serial;
+  $('#sp-n').textContent=S.turns;
+  $('#code-box').textContent=S.entry.padEnd(3,'_');
+  ['gear','spring','wire','code'].forEach(k=>{const m=$('#m-'+k);m.classList.toggle('done',S.done[k]);m.querySelector('.pill').textContent=S.done[k]?'已修好 ✓':'待修';});
+  $('#strikes').textContent='🔩'.repeat(S.strikes)+'⚪'.repeat(MAXS-S.strikes);
+  $('#progress').textContent=`已修好 ${S.order.length} / 4`;
+}
+function solve(k,label){
+  if(S.done[k]||S.over) return;
+  S.done[k]=true; S.order.push({k,label,t:TIME-S.left});
+  toast(label+'修好了','ok'); renderOp();
+  if(S.order.length===4) finish(true,'fixed');
+}
+function strike(k,msg){
+  if(S.over) return;
+  S.strikes++; S.log.push(k);
+  const m=$('#m-'+k); m.classList.remove('shake'); void m.offsetWidth; m.classList.add('shake');
+  toast('🔩 '+msg,'bad'); renderOp();
+  if(S.strikes>=MAXS) finish(false,'strikes');
+}
+
+function bindOp(){
+  document.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>{
+    if(b.dataset.g===ansGear(S.gear)) solve('gear','齒輪組'); else strike('gear','齒輪卡住了，零件彈出來。');
+  });
+  $('#sp-turn').onclick=()=>{if(S.turns<9){S.turns++;renderOp();}};
+  $('#sp-reset').onclick=()=>{S.turns=0;renderOp();};
+  $('#sp-lock').onclick=()=>{ if(S.turns===ansSpring(S.spring)) solve('spring','發條盒'); else {const over=S.turns>ansSpring(S.spring); S.turns=0; strike('spring',over?'轉太緊，彈簧彈出來了。':'發條還太鬆，零件彈出來。');} };
+  if(!bindOp.once){bindOp.once=true;
+  $('#wire-stage').addEventListener('click',e=>{
+    const g=e.target.closest('.wire'); if(!g||S.done.wire) return; const i=+g.dataset.w;
+    if(i===ansWire(S.wire)){S.cut=[i];solve('wire','電線盒');}
+    else{S.cut=[i];renderOp();setTimeout(()=>{S.cut=[];if(!S.over)renderOp();},700);strike('wire','剪錯了，火花把螺絲彈飛。這條先接回去。');}
+  });
+  $('#wire-stage').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){const g=e.target.closest('.wire');if(g){e.preventDefault();g.dispatchEvent(new MouseEvent('click',{bubbles:true}));}}});
+  }
+  const kp=$('#keypad'); kp.innerHTML='';
+  [1,2,3,4,5,6,7,8,9,0].forEach(n=>{const b=document.createElement('button');b.textContent=n;b.onclick=()=>{if(S.entry.length<3){S.entry+=n;renderOp();}};kp.appendChild(b);});
+  const clr=document.createElement('button');clr.className='wide';clr.textContent='清除';clr.onclick=()=>{S.entry='';renderOp();};
+  const ok=document.createElement('button');ok.className='wide';ok.textContent='確認';ok.id='code-ok';
+  ok.onclick=()=>{ if(S.entry.length<3){toast('密碼要 3 個數字');return;}
+    if(S.entry===ansCode(S.code)) solve('code','密碼鎖'); else {S.entry='';strike('code','密碼錯誤，鎖頭彈出一顆螺絲。');} };
+  const sp=document.createElement('span');
+  kp.append(clr,sp,ok);
+}
+
+function startTimer(){
+  S.t0=Date.now(); clearInterval(tick);
+  tick=setInterval(()=>{ if(S.over){clearInterval(tick);return;}
+    S.left=Math.max(0,TIME-Math.floor((Date.now()-S.t0)/1000));
+    const m=Math.floor(S.left/60),s=S.left%60; const el=$('#timer');
+    el.textContent=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`; el.classList.toggle('low',S.left<=60);
+    if(S.left<=0) finish(false,'time');
+  },250);
+}
+
+const fmt=t=>`${Math.floor(t/60)} 分 ${String(t%60).padStart(2,'0')} 秒`;
+function finish(win,why){
+  if(S.over) return; S.over=true; clearInterval(tick);
+  const used=TIME-S.left; const box=$('#end-box');
+  const order=S.order.map(o=>`${o.label}（${fmt(o.t)}）`).join(' → ')||'還沒有修好的地方';
+  const stats=`<div class="stats"><div class="stat">用掉時間<b>${fmt(used)}</b></div><div class="stat">彈出的零件<b>${S.strikes} 個</b></div><div class="stat">修好<b>${S.order.length} / 4</b></div></div>`;
+  const reflect=`<h3>請手冊組也過來看這個畫面，一起聊三件事</h3>
+   <ol class="qs"><li>哪一句話讓工程師一聽就懂？是誰說的？</li>
+   <li>有沒有哪一次，你以為對方懂了，結果其實不是？後來是怎麼發現的？</li>
+   <li>密碼鎖要三本手冊一起才解得開。那時候你們是怎麼分配誰先說、誰後說的？</li></ol>`;
+  if(win){
+    box.innerHTML=`<span class="tag" style="justify-self:start;color:var(--ok);border-color:var(--ok)">完修</span>
+     <h2>阿轉動起來了</h2>
+     <p style="margin:0">發條一放，阿轉在展示台上走了七步，轉身，又走回來。博覽會的工作人員把它搬上推車，說明天早上第一個展出。</p>
+     ${stats}<p class="muted" style="margin:0">修理順序：${order}</p>${reflect}
+     <div class="ctrls"><button class="btn" id="again">換一台阿轉再修一次（零件和規則對照會不一樣）</button></div>`;
+  }else{
+    const reason=why==='time'?'時間到了，博覽會的工作人員來收展示品，阿轉還躺在工作台上。':'第三顆螺絲彈出來的時候，阿轉的手臂也鬆了下來。今天修不完了。';
+    box.innerHTML=`<span class="tag" style="justify-self:start;color:var(--bad);border-color:var(--bad)">待修</span>
+     <h2>阿轉還沒好</h2><p style="margin:0">${reason}</p>
+     ${stats}<p class="muted" style="margin:0">已修好：${order}</p>
+     <h3>重修之前，花一分鐘想想</h3>
+     <ol class="qs"><li>卡最久的是哪一個地方？卡住的原因是「看錯」「聽錯」還是「規則讀錯」？</li>
+     <li>下一輪要不要換人當修理員？</li></ol>
+     <div class="ctrls"><button class="btn" id="again">再修一台</button></div>`;
+  }
+  show('scr-end');
+  $('#again').onclick=()=>{newRun();$('#ticket').textContent=ticket();show('scr-ready');};
+}
+
+/* ---------- 手冊 ---------- */
+function renderBooks(){
+  const box=$('#books'); box.innerHTML='';
+  const sel=['A','B','C'].filter(k=>$('#bk-'+k).checked);
+  if(!sel.length){box.innerHTML='<p class="book" style="margin-top:16px;color:var(--ink)">勾選你負責的手冊，規則就會出現在這裡。</p>';return;}
+  sel.forEach(k=>box.appendChild($('#tpl-'+k).content.cloneNode(true)));
+  const back=document.createElement('div');back.className='book';back.style.marginTop='20px';
+  back.innerHTML='<button class="btn ghost small" id="man-home">回到開始畫面</button>';box.appendChild(back);
+  $('#man-home').onclick=()=>show('scr-start');
+}
+['A','B','C'].forEach(k=>$('#bk-'+k).addEventListener('change',renderBooks));
+
+/* ---------- 入口 ---------- */
+const ticket=()=>String(rint(1000,9999));
+$('#ticket').textContent=ticket();
+$('#go-op').onclick=()=>{newRun();show('scr-ready');};
+$('#go-man').onclick=()=>{renderBooks();show('scr-man');};
+$('#go-start').onclick=()=>{bindOp();renderOp();show('scr-op');startTimer();};
+
+window.__GAME={get S(){return S},ansGear,ansSpring,ansWire,ansCode,finish,newRun};
+})();
+</script>
+
+</body>
+</html>
