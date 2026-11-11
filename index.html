@@ -70,14 +70,14 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--safety);outline
 .ctrls{display:flex;flex-wrap:wrap;gap:8px}
 .ctrls button{background:var(--wall2);color:#fff;padding:10px 14px;font-weight:700;box-shadow:0 3px 0 #0d1d26}
 .ctrls button:active{transform:translateY(2px);box-shadow:0 1px 0 #0d1d26}
-.turns{font-family:var(--f-mono);font-size:18px;align-self:center}
-.wire{cursor:pointer}
-.wire:hover .hit{stroke:rgba(255,176,0,.35)}
 .symbols{display:flex;justify-content:center;gap:18px;font-size:46px;background:#0d1d26;border-radius:6px;padding:10px}
 .codebox{font-family:var(--f-mono);font-size:28px;letter-spacing:10px;text-align:center;background:#0d1d26;color:#6dfc9c;border-radius:6px;padding:4px;min-height:52px}
-.keypad{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
-.keypad button{background:var(--paper2);color:var(--ink);font-family:var(--f-mono);font-size:20px;font-weight:700;padding:8px 0;box-shadow:0 3px 0 var(--metal)}
-.keypad .wide{grid-column:span 2;font-family:var(--f-body);font-size:15px;background:var(--wall2);color:#fff;box-shadow:0 3px 0 #0d1d26}
+.entry{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.entry label{font-weight:700}
+.entry input{font-family:var(--f-mono);font-size:26px;width:5.2em;text-align:center;letter-spacing:6px;padding:4px 6px;border:2px solid var(--wall2);border-radius:8px;background:#fff;color:var(--ink)}
+.entry button{background:var(--wall2);color:#fff;padding:10px 16px;font-weight:700;box-shadow:0 3px 0 #0d1d26}
+.entry button:active{transform:translateY(2px);box-shadow:0 1px 0 #0d1d26}
+.codetab th,.codetab td{white-space:nowrap;padding:6px 8px}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:#fff;padding:12px 20px;border-radius:10px;font-weight:700;max-width:calc(100% - 32px);z-index:20;box-shadow:0 6px 20px rgba(0,0,0,.4)}
 .toast.bad{background:var(--bad)}.toast.ok{background:var(--ok)}
 .shake{animation:shake .35s}
@@ -143,7 +143,7 @@ th{background:#e3edf5}
       <li><b>3 人</b>：1 位修理員＋2 位工程師（一人拿齒輪本，一人拿發條本和電路本）</li>
       <li><b>4 人</b>：1 位修理員＋3 位工程師（每人一本）</li>
     </ul>
-    <p class="muted" style="margin:8px 0 0">修理員用一台平板或電腦；工程師用另一台裝置打開同一個網址，選「我拿手冊」。手冊可以投影在大螢幕給好幾組共用。限時 12 分鐘，零件彈出來 3 次就要重修。</p>
+    <p class="muted" style="margin:8px 0 0">修理員用一台平板或電腦；工程師用另一台裝置打開同一個網址，選「我拿手冊」。手冊可以投影在大螢幕給好幾組共用。修理員要輸入工程師查到的編號才能動手，沒辦法自己試答案。限時 12 分鐘，零件彈出來 3 次就要重修。</p>
   </div>
 </section>
 
@@ -154,7 +154,8 @@ th{background:#e3edf5}
     <ul class="teams">
       <li>工程師們都打開手冊、選好自己負責哪一本了嗎？</li>
       <li>工程師坐的位置看不到這個螢幕嗎？</li>
-      <li>四個地方可以照任何順序修。修錯一次，零件會彈出來（🔩），彈出 3 次阿轉就散了。</li>
+      <li>四個地方可以照任何順序修。每個地方都要輸入工程師給的編號，你自己猜不出來。</li>
+      <li>裝錯一次，零件會彈出來（🔩），那個地方也會整個重新組裝，要重新描述一次。彈出 3 次阿轉就散了。</li>
     </ul>
     <button class="btn" id="go-start" style="justify-self:start">開始計時</button>
   </div>
@@ -165,37 +166,33 @@ th{background:#e3edf5}
   <div class="hud">
     <span class="timer" id="timer">12:00</span>
     <span>彈出的零件 <span class="strikes" id="strikes">⚪⚪⚪</span></span>
-    <span>阿轉背面的貼紙 <span class="serial" id="serial">W-07-?</span></span>
+    <span>型號牌 <span class="serial" id="tag">?</span></span>
+    <span>背面貼紙 <span class="serial" id="serial">W-07-?</span></span>
     <span id="progress">已修好 0 / 4</span>
   </div>
   <div class="mods">
     <article class="panel mod" id="m-gear">
       <header><h3>① 齒輪組</h3><span class="pill">待修</span></header>
       <div class="stage" id="gear-stage"></div>
-      <p class="muted" style="margin:0">搖桿裝在最左邊的齒輪上。最右邊的齒輪要怎麼轉？</p>
-      <div class="ctrls">
-        <button data-g="cw-fast">↻ 順時針・快</button><button data-g="cw-slow">↻ 順時針・慢</button>
-        <button data-g="ccw-fast">↺ 逆時針・快</button><button data-g="ccw-slow">↺ 逆時針・慢</button>
-      </div>
+      <p class="muted" style="margin:0">搖桿裝在最左邊的齒輪上。跟工程師要這組齒輪的零件編號。</p>
+      <form class="entry" data-mod="gear"><label for="in-gear">零件編號</label><input id="in-gear" inputmode="numeric" maxlength="3" autocomplete="off" placeholder="___"><button type="submit">安裝</button></form>
     </article>
     <article class="panel mod" id="m-spring">
       <header><h3>② 發條盒</h3><span class="pill">待修</span></header>
       <div class="stage" id="spring-stage"></div>
-      <div class="ctrls">
-        <button id="sp-turn">轉一圈</button><button id="sp-reset">歸零</button><button id="sp-lock">🔒 鎖上發條</button>
-        <span class="turns">已轉 <b id="sp-n">0</b> 圈</span>
-      </div>
+      <p class="muted" style="margin:0">發條要轉幾圈，工程師會換成扳手編號告訴你。</p>
+      <form class="entry" data-mod="spring"><label for="in-spring">扳手編號</label><input id="in-spring" inputmode="numeric" maxlength="3" autocomplete="off" placeholder="___"><button type="submit">上發條</button></form>
     </article>
     <article class="panel mod" id="m-wire">
       <header><h3>③ 電線盒</h3><span class="pill">待修</span></header>
       <div class="stage" id="wire-stage"></div>
-      <p class="muted" style="margin:0">只能剪一條。點電線就會剪下去。</p>
+      <p class="muted" style="margin:0">只能剪一條。工程師會給你剪線鉗的編號。</p>
+      <form class="entry" data-mod="wire"><label for="in-wire">剪線鉗編號</label><input id="in-wire" inputmode="numeric" maxlength="3" autocomplete="off" placeholder="___"><button type="submit">剪下去</button></form>
     </article>
     <article class="panel mod" id="m-code">
       <header><h3>④ 胸口密碼鎖</h3><span class="pill">待修</span></header>
       <div class="symbols" id="code-sym"></div>
-      <div class="codebox" id="code-box"></div>
-      <div class="keypad" id="keypad"></div>
+      <form class="entry" data-mod="code"><label for="in-code">密碼</label><input id="in-code" inputmode="numeric" maxlength="3" autocomplete="off" placeholder="___"><button type="submit">解鎖</button></form>
     </article>
   </div>
 </section>
@@ -212,6 +209,7 @@ th{background:#e3edf5}
         <label><input type="checkbox" id="bk-C" value="C"> 📙 電路本</label>
       </div>
       <div class="note"><b>好用的問法</b>：先問「有幾個？」再問「從左邊（上面）開始，第一個是什麼顏色？」。聽完後用自己的話說一次給修理員確認：「所以是紅、藍、藍，對嗎？」</div>
+      <div class="note"><b>編號怎麼查</b>：用規則推出修法以後，先問修理員阿轉的<b>型號牌</b>是哪一種動物，再到編號表裡找「這個型號＋這個修法」的那一格，把 3 位數編號唸給修理員。</div>
     </div>
     <div id="books"></div>
   </div>
@@ -235,6 +233,8 @@ th{background:#e3edf5}
     <li>從左往右一個一個推，找出最右邊齒輪的方向。</li>
     <li>速度：最右邊的齒輪如果比最左邊的<b>大</b>，選「慢」；一樣大或比較小，選「快」。</li>
   </ol>
+  <p style="margin:0;color:var(--ink)">推出「方向＋速度」後，查零件編號：</p>
+  <div class="tablewrap" data-codetab="gear"></div>
   <h3>④ 密碼表（上半）</h3>
   <p style="margin:0;color:var(--ink)">密碼鎖的螢幕會出現 3 個圖案。這本只有 4 個圖案的數字，另外 4 個在電路本。輸入順序要問發條本。</p>
   <div class="tablewrap"><table class="symtab"><tr><th>圖案</th><th>數字</th></tr>
@@ -251,10 +251,11 @@ th{background:#e3edf5}
     <tr><th>銅色（橘棕色）</th><td>4</td><td>3</td><td>2</td></tr>
     <tr><th>黑色</th><td>2</td><td>1</td><td>0</td></tr></table></div>
   <ul style="color:var(--ink)">
-    <li>表格的數字是「要轉幾圈」，轉好再按「鎖上發條」。</li>
+    <li>表格的數字是「要轉幾圈」。</li>
     <li>如果發條盒上貼著 ⚠️ 貼紙，要多轉 1 圈。</li>
-    <li>0 圈＝不用轉，直接鎖上。</li>
   </ul>
+  <p style="margin:0;color:var(--ink)">算出圈數後，查扳手編號：</p>
+  <div class="tablewrap" data-codetab="spring"></div>
   <h3>④ 密碼的輸入順序</h3>
   <p style="margin:0;color:var(--ink)">數字要問齒輪本和電路本。順序看阿轉背面貼紙（像 W-07-K）的<b>最後一個字</b>：</p>
   <ul style="color:var(--ink)">
@@ -276,6 +277,8 @@ th{background:#e3edf5}
     <li>有黑線 → 剪第 1 條。</li>
     <li>上面都不符合 → 剪最後一條紅線。</li>
   </ol>
+  <p style="margin:0;color:var(--ink)">決定剪第幾條後，查剪線鉗編號：</p>
+  <div class="tablewrap" data-codetab="wire"></div>
   <h3>④ 密碼表（下半）</h3>
   <p style="margin:0;color:var(--ink)">另外 4 個圖案在齒輪本。輸入順序要問發條本。</p>
   <div class="tablewrap"><table class="symtab"><tr><th>圖案</th><th>數字</th></tr>
@@ -294,6 +297,15 @@ const WCOL={紅:'#e5484d',藍:'#2f6fe0',黃:'#f2c230',白:'#ffffff',黑:'#222222
 const SCOL={銀色:'#c3ccd2',銅色:'#c46f3b',黑色:'#2a2a2a'};
 const SYM={'☀️':7,'🌙':2,'⭐':5,'☁️':9,'🍀':4,'🔥':8,'💧':1,'🍄':6};
 const SPRING={銀色:{綠:3,黃:2,紅:1},銅色:{綠:4,黃:3,紅:2},黑色:{綠:2,黃:1,紅:0}};
+const TAGS=['🐢 烏龜','🦊 狐狸','🐧 企鵝','🐝 蜜蜂'];
+const ANS={gear:['cw-fast','cw-slow','ccw-fast','ccw-slow'],spring:[0,1,2,3,4,5],wire:[0,1,2,3,4]};
+const HEAD={gear:['↻ 順時針・快','↻ 順時針・慢','↺ 逆時針・快','↺ 逆時針・慢'],spring:['0 圈','1 圈','2 圈','3 圈','4 圈','5 圈'],wire:['第 1 條','第 2 條','第 3 條','第 4 條','第 5 條']};
+const LABEL={gear:'齒輪組',spring:'發條盒',wire:'電線盒',code:'密碼鎖'};
+// 固定的編號表（手冊與修理員端共用同一組，種子固定）
+const CODES=(()=>{let t=20261111;const r=()=>{t|=0;t=t+0x6D2B79F5|0;let x=Math.imul(t^t>>>15,1|t);x=x+Math.imul(x^x>>>7,61|x)^x;return((x^x>>>14)>>>0)/4294967296;};
+  const used=new Set(),out={};
+  for(const k of ['gear','spring','wire']){out[k]=TAGS.map(()=>ANS[k].map(()=>{let c;do{c=String(100+Math.floor(r()*900));}while(used.has(c));used.add(c);return c;}));}
+  return out;})();
 let S=null, tick=null;
 
 function genGear(){
@@ -336,9 +348,20 @@ function ansCode(c){
 }
 
 function newRun(){
-  S={gear:genGear(),spring:genSpring(),wire:genWire(),code:genCode(),
+  S={gear:genGear(),spring:genSpring(),wire:genWire(),code:genCode(),tag:rint(0,TAGS.length-1),
      done:{gear:false,spring:false,wire:false,code:false},order:[],strikes:0,
-     turns:0,entry:'',cut:[],t0:0,left:TIME,over:false,log:[]};
+     tries:{gear:0,spring:0,wire:0,code:0},cut:[],t0:0,left:TIME,over:false,log:[]};
+}
+function expected(k){
+  if(k==='code') return ansCode(S.code);
+  const a={gear:ansGear(S.gear),spring:ansSpring(S.spring),wire:ansWire(S.wire)}[k];
+  return CODES[k][S.tag][ANS[k].indexOf(a)];
+}
+function reshuffle(k){ // 裝錯後整組重新組裝，之前試過的資訊作廢
+  if(k==='gear') S.gear=genGear();
+  if(k==='spring') S.spring=genSpring();
+  if(k==='wire') S.wire=genWire();
+  if(k==='code'){const serial=S.code.serial;S.code=genCode();S.code.serial=serial;}
 }
 
 /* ---------- 畫面 ---------- */
@@ -381,7 +404,7 @@ function wireSVG(w,cut){
     const line=isCut?`<path d="M30 ${y} H150 M180 ${y} H300" stroke="${col}" stroke-width="9" stroke-linecap="round"/>`:
       `<path d="M30 ${y} C110 ${y-14},220 ${y+14},300 ${y}" stroke="${col}" stroke-width="9" fill="none"/>`;
     const outline=(c==='白')?(isCut?`<path d="M30 ${y} H150 M180 ${y} H300" stroke="#8a969c" stroke-width="12" stroke-linecap="round"/>`:`<path d="M30 ${y} C110 ${y-14},220 ${y+14},300 ${y}" stroke="#8a969c" stroke-width="12" fill="none"/>`):'';
-    p+=`<g class="wire" data-w="${i}" tabindex="0" role="button" aria-label="電線"><path class="hit" d="M30 ${y} H300" stroke="transparent" stroke-width="30"/>${outline}${line}</g>`;});
+    p+=`<g class="wire" data-w="${i}"><path class="hit" d="M30 ${y} H300" stroke="transparent" stroke-width="30"/>${outline}${line}</g>`;});
   return `<svg viewBox="0 0 330 ${H}" width="330" role="img" aria-label="電線盒">${p}</svg>`;
 }
 
@@ -391,8 +414,7 @@ function renderOp(){
   $('#wire-stage').innerHTML=wireSVG(S.wire,S.cut);
   $('#code-sym').textContent=S.code.sym.join(' ');
   $('#serial').textContent=S.code.serial;
-  $('#sp-n').textContent=S.turns;
-  $('#code-box').textContent=S.entry.padEnd(3,'_');
+  $('#tag').textContent=TAGS[S.tag];
   ['gear','spring','wire','code'].forEach(k=>{const m=$('#m-'+k);m.classList.toggle('done',S.done[k]);m.querySelector('.pill').textContent=S.done[k]?'已修好 ✓':'待修';});
   $('#strikes').textContent='🔩'.repeat(S.strikes)+'⚪'.repeat(MAXS-S.strikes);
   $('#progress').textContent=`已修好 ${S.order.length} / 4`;
@@ -412,28 +434,16 @@ function strike(k,msg){
 }
 
 function bindOp(){
-  document.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>{
-    if(b.dataset.g===ansGear(S.gear)) solve('gear','齒輪組'); else strike('gear','齒輪卡住了，零件彈出來。');
-  });
-  $('#sp-turn').onclick=()=>{if(S.turns<9){S.turns++;renderOp();}};
-  $('#sp-reset').onclick=()=>{S.turns=0;renderOp();};
-  $('#sp-lock').onclick=()=>{ if(S.turns===ansSpring(S.spring)) solve('spring','發條盒'); else {const over=S.turns>ansSpring(S.spring); S.turns=0; strike('spring',over?'轉太緊，彈簧彈出來了。':'發條還太鬆，零件彈出來。');} };
-  if(!bindOp.once){bindOp.once=true;
-  $('#wire-stage').addEventListener('click',e=>{
-    const g=e.target.closest('.wire'); if(!g||S.done.wire) return; const i=+g.dataset.w;
-    if(i===ansWire(S.wire)){S.cut=[i];solve('wire','電線盒');}
-    else{S.cut=[i];renderOp();setTimeout(()=>{S.cut=[];if(!S.over)renderOp();},700);strike('wire','剪錯了，火花把螺絲彈飛。這條先接回去。');}
-  });
-  $('#wire-stage').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){const g=e.target.closest('.wire');if(g){e.preventDefault();g.dispatchEvent(new MouseEvent('click',{bubbles:true}));}}});
-  }
-  const kp=$('#keypad'); kp.innerHTML='';
-  [1,2,3,4,5,6,7,8,9,0].forEach(n=>{const b=document.createElement('button');b.textContent=n;b.onclick=()=>{if(S.entry.length<3){S.entry+=n;renderOp();}};kp.appendChild(b);});
-  const clr=document.createElement('button');clr.className='wide';clr.textContent='清除';clr.onclick=()=>{S.entry='';renderOp();};
-  const ok=document.createElement('button');ok.className='wide';ok.textContent='確認';ok.id='code-ok';
-  ok.onclick=()=>{ if(S.entry.length<3){toast('密碼要 3 個數字');return;}
-    if(S.entry===ansCode(S.code)) solve('code','密碼鎖'); else {S.entry='';strike('code','密碼錯誤，鎖頭彈出一顆螺絲。');} };
-  const sp=document.createElement('span');
-  kp.append(clr,sp,ok);
+  if(bindOp.once) return; bindOp.once=true;
+  document.querySelectorAll('form.entry').forEach(f=>f.addEventListener('submit',e=>{
+    e.preventDefault(); const k=f.dataset.mod, inp=f.querySelector('input');
+    if(S.done[k]||S.over) return;
+    const v=inp.value.replace(/\D/g,'');
+    if(v.length!==3){toast('編號是 3 位數字');return;}
+    S.tries[k]++; inp.value='';
+    if(v===expected(k)){ if(k==='wire') S.cut=[ansWire(S.wire)]; solve(k,LABEL[k]); }
+    else { reshuffle(k); strike(k,'裝錯了，零件彈出來。這個地方重新組裝過，要再描述一次。'); }
+  }));
 }
 
 function startTimer(){
@@ -451,7 +461,8 @@ function finish(win,why){
   if(S.over) return; S.over=true; clearInterval(tick);
   const used=TIME-S.left; const box=$('#end-box');
   const order=S.order.map(o=>`${o.label}（${fmt(o.t)}）`).join(' → ')||'還沒有修好的地方';
-  const stats=`<div class="stats"><div class="stat">用掉時間<b>${fmt(used)}</b></div><div class="stat">彈出的零件<b>${S.strikes} 個</b></div><div class="stat">修好<b>${S.order.length} / 4</b></div></div>`;
+  const stats=`<div class="stats"><div class="stat">用掉時間<b>${fmt(used)}</b></div><div class="stat">彈出的零件<b>${S.strikes} 個</b></div><div class="stat">修好<b>${S.order.length} / 4</b></div></div>
+   <p class="muted" style="margin:0">每個地方輸入了幾次編號：${['gear','spring','wire','code'].map(k=>`${LABEL[k]} ${S.tries[k]} 次`).join('、')}</p>`;
   const reflect=`<h3>請手冊組也過來看這個畫面，一起聊三件事</h3>
    <ol class="qs"><li>哪一句話讓工程師一聽就懂？是誰說的？</li>
    <li>有沒有哪一次，你以為對方懂了，結果其實不是？後來是怎麼發現的？</li>
@@ -461,7 +472,7 @@ function finish(win,why){
      <h2>阿轉動起來了</h2>
      <p style="margin:0">發條一放，阿轉在展示台上走了七步，轉身，又走回來。博覽會的工作人員把它搬上推車，說明天早上第一個展出。</p>
      ${stats}<p class="muted" style="margin:0">修理順序：${order}</p>${reflect}
-     <div class="ctrls"><button class="btn" id="again">換一台阿轉再修一次（零件和規則對照會不一樣）</button></div>`;
+     <div class="ctrls"><button class="btn" id="again">換一台阿轉再修一次</button></div>`;
   }else{
     const reason=why==='time'?'時間到了，博覽會的工作人員來收展示品，阿轉還躺在工作台上。':'第三顆螺絲彈出來的時候，阿轉的手臂也鬆了下來。今天修不完了。';
     box.innerHTML=`<span class="tag" style="justify-self:start;color:var(--bad);border-color:var(--bad)">待修</span>
@@ -482,6 +493,8 @@ function renderBooks(){
   const sel=['A','B','C'].filter(k=>$('#bk-'+k).checked);
   if(!sel.length){box.innerHTML='<p class="book" style="margin-top:16px;color:var(--ink)">勾選你負責的手冊，規則就會出現在這裡。</p>';return;}
   sel.forEach(k=>box.appendChild($('#tpl-'+k).content.cloneNode(true)));
+  box.querySelectorAll('[data-codetab]').forEach(d=>{const k=d.dataset.codetab;
+    d.innerHTML=`<table class="codetab"><tr><th>型號＼修法</th>${HEAD[k].map(h=>`<th>${h}</th>`).join('')}</tr>${TAGS.map((t,i)=>`<tr><th>${t}</th>${CODES[k][i].map(c=>`<td class="mono">${c}</td>`).join('')}</tr>`).join('')}</table>`;});
   const back=document.createElement('div');back.className='book';back.style.marginTop='20px';
   back.innerHTML='<button class="btn ghost small" id="man-home">回到開始畫面</button>';box.appendChild(back);
   $('#man-home').onclick=()=>show('scr-start');
@@ -493,9 +506,9 @@ const ticket=()=>String(rint(1000,9999));
 $('#ticket').textContent=ticket();
 $('#go-op').onclick=()=>{newRun();show('scr-ready');};
 $('#go-man').onclick=()=>{renderBooks();show('scr-man');};
-$('#go-start').onclick=()=>{bindOp();renderOp();show('scr-op');startTimer();};
+$('#go-start').onclick=()=>{document.querySelectorAll('form.entry input').forEach(i=>i.value='');bindOp();renderOp();show('scr-op');startTimer();};
 
-window.__GAME={get S(){return S},ansGear,ansSpring,ansWire,ansCode,finish,newRun};
+window.__GAME={get S(){return S},ansGear,ansSpring,ansWire,ansCode,finish,newRun,expected,CODES};
 })();
 </script>
 
